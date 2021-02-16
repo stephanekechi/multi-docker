@@ -1,0 +1,23 @@
+sudo: required
+services:
+  - docker
+
+before_install:
+  - docker build -t greatness/react-test -f ./client/Dockerfile.dev ./client
+
+script: 
+  - docker run -e CI=true greatness/react-test npm run test -- --coverage
+
+#####Deploying to Docker hub (for Production)
+after_success:
+  - docker build -t greatness/multi-client ./client
+  - docker build -t greatness/multi-nginx ./nginx
+  - docker build -t greatness/multi-server ./server
+  - docker build -t greatness/multi-worker ./worker
+  #Log into the docker CLI
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  # Take those images and push them to docker hub
+  - docker push greatness/multi-client
+  - docker push greatness/multi-nginx
+  - docker push greatness/multi-server
+  - docker push greatness/multi-worker
