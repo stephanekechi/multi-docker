@@ -1,0 +1,58 @@
+version: '3'
+services:
+  postgres: #Service 1
+    image: 'postgres:latest'
+    environment:
+      - POSTGRES_PASSWORD=postgres_password
+      - POSTGRES_USER=postgres
+
+  redis: #Service 2
+    image: 'redis:latest'
+
+  api: #Service 3: Express server
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    volumes:
+      - /home/app/node_modules
+      - ./server:/app #to prevent build everytime changes are done
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PGUSER=postgres
+      - PGHOST=postgres
+      - PGDATABASE=postgres
+      - PGPASSWORD=postgres_password
+      - PGPORT=5432
+
+  client: #Service 4: React
+    stdin_open: true
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    volumes:
+      - /home/app/node_modules
+      - ./client:/app
+
+  worker: #Sercice 5: for Fib function
+    build:
+      context: ./worker
+      dockerfile: Dockerfile.dev
+    volumes:
+      - /home/app/node_modules
+      - ./worker:/app
+    environment: 
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  nginx: #Service 6: Loadbalancer
+    restart: always
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.dev
+    ports:
+      - '8000:80'
+    depends_on:
+      - api
+      - client
+
